@@ -5,14 +5,15 @@ import { Strategy as DiscordStrategy } from "passport-discord";
 import User from "../models/User.js";
 import { logger } from "../utils/logger.js";
 import dotenv from "dotenv";
-
 import { sendWelcomeEmail } from "../services/emailService.js";
 
 dotenv.config();
 
-const BASE_URL = process.env.VERCEL_URL
-  ? `https://${process.env.VERCEL_URL}`
-  : "http://localhost:5000";
+
+const BASE_URL =
+  process.env.NODE_ENV === "production"
+    ? "https://pui-vercel-backend.vercel.app"
+    : "http://localhost:5000";
 
 const handleSocialAuth = async (
   provider,
@@ -32,11 +33,10 @@ const handleSocialAuth = async (
         user.avatar = avatar;
         await user.save();
       }
-      // 🚪 RETURN EARLY - Do not run the email code below
       return done(null, user);
     }
 
-    // 3. NEW USER LOGIC (Run this only for first-timers)
+   
     user = await User.create({
       name,
       email,
@@ -45,11 +45,10 @@ const handleSocialAuth = async (
       providerId: profileId,
     });
 
-    // ✅ SEND WELCOME EMAIL (Runs ONLY for new users)
+   
     try {
       logger.info(`New user detected! Sending welcome email to ${email}...`);
       await sendWelcomeEmail(email, name);
-      logger.info(`Welcome email sent.`);
     } catch (emailError) {
       logger.error(`Failed to send welcome email: ${emailError.message}`);
     }
@@ -61,7 +60,7 @@ const handleSocialAuth = async (
   }
 };
 
-// --- STRATEGIES ---
+
 
 passport.use(
   new GoogleStrategy(
