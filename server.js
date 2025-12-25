@@ -7,19 +7,19 @@ import helmet from "helmet";
 import morgan from "morgan";
 import path from "path";
 
+// 👇 Import your optimized DB connection
 import connectDB from "./src/config/db.js";
 import "./src/config/passport.js";
 
 import authRoutes from "./src/routes/authRoutes.js";
-
 import { errorHandler } from "./src/middlewares/errorMiddleware.js";
 
 dotenv.config();
 
-connectDB();
+// ❌ REMOVED: connectDB();
+// We removed the top-level call because we want the middleware below to handle it.
 
 const app = express();
-
 
 app.use(
   helmet({
@@ -36,7 +36,6 @@ app.set("trust proxy", 1);
 app.use(
   cors({
     origin: (origin, callback) => {
-      
       const clientUrl = process.env.CLIENT_URL
         ? process.env.CLIENT_URL.replace(/\/$/, "")
         : "";
@@ -53,6 +52,19 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization", "x-csrf-token"],
   })
 );
+
+// 👇🔥 THE FIX: Add this middleware BEFORE your routes
+// This forces Vercel to wait for the DB connection before running any logic
+app.use(async (req, res, next) => {
+  try {
+    await connectDB(); // Wait for the cached connection
+    next();
+  } catch (err) {
+    console.error("Database connection failed during request:", err);
+    res.status(500).json({ error: "Database connection failed" });
+  }
+});
+// 👆 END FIX
 
 app.use(passport.initialize());
 
