@@ -6,6 +6,7 @@ const COOKIE_BASE = {
   httpOnly: true,
   secure: true,
   sameSite: "none",
+  path: "/",
 };
 
 export const socialCallback = (req, res) => {
@@ -60,12 +61,15 @@ export const refreshToken = (req, res) => {
 };
 
 export const logout = (_req, res) => {
-  res.clearCookie("accessToken", COOKIE_BASE);
-  res.clearCookie("refreshToken", COOKIE_BASE);
+  const clearOptions = { ...COOKIE_BASE, maxAge: 0 };
+
+  res.clearCookie("accessToken", clearOptions);
+  res.clearCookie("refreshToken", clearOptions);
 
   res.clearCookie("csrfToken", {
     secure: true,
     sameSite: "none",
+    path: "/",
   });
 
   return res.status(200).json({ message: "Logged out successfully" });

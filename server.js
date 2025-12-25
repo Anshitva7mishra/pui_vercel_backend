@@ -20,15 +20,34 @@ connectDB();
 
 const app = express();
 
-app.use(helmet());
+
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  })
+);
 app.use(morgan("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+app.set("trust proxy", 1);
+
 app.use(
   cors({
-    origin: ["http://localhost:5173", process.env.CLIENT_URL],
+    origin: (origin, callback) => {
+      
+      const clientUrl = process.env.CLIENT_URL
+        ? process.env.CLIENT_URL.replace(/\/$/, "")
+        : "";
+      const allowedOrigins = ["http://localhost:5173", clientUrl];
+
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization", "x-csrf-token"],
