@@ -6,7 +6,7 @@ export const generateCsrfToken = (_req, res) => {
   const csrfToken = crypto.randomBytes(32).toString("hex");
 
   res.cookie("csrfToken", csrfToken, {
-    httpOnly: false, // Frontend needs to read this if not using the JSON response
+    httpOnly: false,
     secure: isProduction,
     sameSite: isProduction ? "none" : "lax",
   });
