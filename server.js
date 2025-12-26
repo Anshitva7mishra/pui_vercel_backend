@@ -1,8 +1,8 @@
-
+// 👇 CHANGE 1: Use this special import at the VERY TOP
 import "dotenv/config";
 
 import express from "express";
-
+// remove: import dotenv from "dotenv";  <-- You don't need this anymore
 import cors from "cors";
 import passport from "passport";
 import cookieParser from "cookie-parser";
@@ -16,8 +16,10 @@ import "./src/config/passport.js";
 import authRoutes from "./src/routes/authRoutes.js";
 import { errorHandler } from "./src/middlewares/errorMiddleware.js";
 
+// remove: dotenv.config(); <-- This is handled by the top import now
 
-
+// ... rest of your server.js code remains exactly the same ...
+// (connectDB removed from top level, app setup, middlewares, etc.)
 
 const app = express();
 
