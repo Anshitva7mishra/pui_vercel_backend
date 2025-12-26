@@ -2,13 +2,12 @@ import jwt from "jsonwebtoken";
 import { signAccessToken, signRefreshToken } from "../utils/token.js";
 import { logger } from "../utils/logger.js";
 
-
 const COOKIE_BASE = {
   httpOnly: true,
-  secure: true, 
-  sameSite: "none", 
+  secure: true,
+  sameSite: "none",
   path: "/",
-  partitioned: true, 
+  partitioned: true,
 };
 
 export const socialCallback = (req, res) => {
@@ -20,16 +19,16 @@ export const socialCallback = (req, res) => {
       return res.redirect(`${clientUrl}/auth/login?error=no_user`);
     }
 
+    // 1. Generate Tokens
     const accessToken = signAccessToken(req.user._id);
     const refreshToken = signRefreshToken(req.user._id);
 
-    // Set Access Token
+    // 2. Set Cookies (Keep this as a backup for Desktop/Postman)
     res.cookie("accessToken", accessToken, {
       ...COOKIE_BASE,
       maxAge: 15 * 60 * 1000, // 15 minutes
     });
 
-    // Set Refresh Token
     res.cookie("refreshToken", refreshToken, {
       ...COOKIE_BASE,
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
@@ -37,8 +36,10 @@ export const socialCallback = (req, res) => {
 
     logger.info(`User ${req.user._id} logged in via Social Auth`);
 
-    // Redirect to frontend (optionally add a query param so frontend knows to refetch user)
-    return res.redirect(`${clientUrl}?login=success`);
+    // 3. 🔥 CRITICAL FIX: Send Token in URL
+    // We redirect to the specific page (Home) with the token attached.
+    // The Frontend will grab this token and save it to LocalStorage.
+    return res.redirect(`${clientUrl}/?token=${accessToken}`);
   } catch (err) {
     logger.error(`Social Callback Error: ${err.message}`);
     const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
@@ -62,7 +63,7 @@ export const refreshToken = (req, res) => {
       maxAge: 15 * 60 * 1000,
     });
 
-    return res.status(200).json({ success: true });
+    return res.status(200).json({ success: true, accessToken: newAccessToken });
   } catch (err) {
     logger.error(`Refresh Token Error: ${err.message}`);
     return res.status(403).json({ message: "Invalid refresh token" });
@@ -76,7 +77,7 @@ export const logout = (_req, res) => {
   res.clearCookie("accessToken", clearOptions);
   res.clearCookie("refreshToken", clearOptions);
 
-  // Clear CSRF Cookie (match the exact options used when creating it)
+  // Clear CSRF Cookie
   res.clearCookie("csrfToken", {
     secure: true,
     sameSite: "none",
