@@ -7,7 +7,6 @@ const COOKIE_BASE = {
   secure: true,
   sameSite: "none",
   path: "/",
-  partitioned: true,
 };
 
 export const socialCallback = (req, res) => {
@@ -15,35 +14,27 @@ export const socialCallback = (req, res) => {
     const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
 
     if (!req.user) {
-      logger.warn("Social Callback: No user found in request");
-      return res.redirect(`${clientUrl}/auth/login?error=no_user`);
+      return res.redirect(`${clientUrl}/404`);
     }
 
-    // 1. Generate Tokens
     const accessToken = signAccessToken(req.user._id);
     const refreshToken = signRefreshToken(req.user._id);
 
-    // 2. Set Cookies (Keep this as a backup for Desktop/Postman)
     res.cookie("accessToken", accessToken, {
       ...COOKIE_BASE,
-      maxAge: 15 * 60 * 1000, // 15 minutes
+      maxAge: 15 * 60 * 1000,
     });
 
     res.cookie("refreshToken", refreshToken, {
       ...COOKIE_BASE,
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    logger.info(`User ${req.user._id} logged in via Social Auth`);
-
-    // 3. 🔥 CRITICAL FIX: Send Token in URL
-    // We redirect to the specific page (Home) with the token attached.
-    // The Frontend will grab this token and save it to LocalStorage.
-    return res.redirect(`${clientUrl}/?token=${accessToken}`);
+    return res.redirect(clientUrl);
   } catch (err) {
     logger.error(`Social Callback Error: ${err.message}`);
     const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
-    return res.redirect(`${clientUrl}/auth/login?error=server_error`);
+    return res.redirect(`${clientUrl}/500`);
   }
 };
 
@@ -63,9 +54,8 @@ export const refreshToken = (req, res) => {
       maxAge: 15 * 60 * 1000,
     });
 
-    return res.status(200).json({ success: true, accessToken: newAccessToken });
+    return res.status(200).json({ success: true });
   } catch (err) {
-    logger.error(`Refresh Token Error: ${err.message}`);
     return res.status(403).json({ message: "Invalid refresh token" });
   }
 };
@@ -73,11 +63,9 @@ export const refreshToken = (req, res) => {
 export const logout = (_req, res) => {
   const clearOptions = { ...COOKIE_BASE, maxAge: 0 };
 
-  // Clear Auth Cookies
   res.clearCookie("accessToken", clearOptions);
   res.clearCookie("refreshToken", clearOptions);
 
-  // Clear CSRF Cookie
   res.clearCookie("csrfToken", {
     secure: true,
     sameSite: "none",
